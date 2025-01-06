@@ -7,8 +7,9 @@ use mid_brownie_testing::compute_midpoint;
 use plotters::backend::{BitMapBackend, SVGBackend};
 use plotters::chart::{ChartBuilder, MeshStyle};
 use plotters::drawing::IntoDrawingArea;
+use plotters::prelude::{FontFamily, FontStyle};
 use plotters::series::SurfaceSeries;
-use plotters::style::{BLUE, Color, ShapeStyle, WHITE};
+use plotters::style::{BLACK, BLUE, Color, FontDesc, ShapeStyle, WHITE};
 use std::error::Error;
 use std::num::NonZero;
 use std::{env, iter};
@@ -60,11 +61,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut midpoint = 1u64.reverse_bits();
 
+    let area = BitMapBackend::gif("3d.gif", (1080, 1080), 1_000)?.into_drawing_area();
     for i in 1usize..=ITERATIONS {
-        let filename = format!("out-{i}.bmp");
-        let area = BitMapBackend::new(&filename, (1920, 1080)).into_drawing_area();
         area.fill(&WHITE)?;
-
         let mut chart =
             ChartBuilder::on(&area).build_cartesian_3d(0..u64::MAX, 0f64..max, 0..u64::MAX)?;
 
@@ -94,7 +93,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         chart.draw_series(series)?;
 
-        area.present()?;
+        area.titled(
+            &format!("n={i}"),
+            FontDesc::new(FontFamily::SansSerif, 64.0, FontStyle::Normal).color(&BLACK),
+        )?
+        .present()?;
 
         midpoint >>= 1;
         let next_noise = (noise as f64 * decay) as u64;

@@ -2,15 +2,15 @@
 #![feature(iter_intersperse)]
 
 use gxhash::gxhash64;
-use plotters::backend::SVGBackend;
+use mid_brownie_testing::compute_midpoint;
+use plotters::backend::{BitMapBackend, SVGBackend};
 use plotters::chart::ChartBuilder;
 use plotters::drawing::IntoDrawingArea;
+use plotters::prelude::{FontDesc, FontFamily, FontStyle};
 use plotters::series::LineSeries;
 use plotters::style::{BLACK, Color, WHITE};
 use std::env;
 use std::error::Error;
-
-use mid_brownie_testing::compute_midpoint;
 
 fn find_point(n: u64, mut noise: u64, decay: f64, seed: i64, iterations: usize) -> f64 {
     let max = noise as f64 / (1f64 - decay);
@@ -68,9 +68,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut midpoint = 1u64.reverse_bits();
 
+    let area = BitMapBackend::gif("2d.gif", (1080, 1080), 1_000)?.into_drawing_area();
     for i in 1usize..=ITERATIONS {
-        let filename = format!("out-{i}.svg");
-        let area = SVGBackend::new(&filename, (1920 * 10, 1080 * 10)).into_drawing_area();
         area.fill(&WHITE)?;
 
         let mut chart = ChartBuilder::on(&area).build_cartesian_2d(0..u64::MAX, 0f64..max)?;
@@ -89,7 +88,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         chart.draw_series(series)?;
 
-        area.present()?;
+        area.titled(
+            &format!("n={i}"),
+            FontDesc::new(FontFamily::SansSerif, 64.0, FontStyle::Normal).color(&BLACK),
+        )?
+        .present()?;
 
         midpoint >>= 1;
         let next_noise = (noise as f64 * decay) as u64;
