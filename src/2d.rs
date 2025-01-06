@@ -10,11 +10,7 @@ use plotters::style::{BLACK, Color, WHITE};
 use std::env;
 use std::error::Error;
 
-fn compute_midpoint(i1: u64, i2: u64, v1: f64, v2: f64, noise: u64, seed: i64) -> f64 {
-    (v1 + v2) / 2f64 + { gxhash64(&[i1.to_ne_bytes(), i2.to_ne_bytes()].concat(), seed) % noise }
-        as f64
-        - (noise >> 1) as f64
-}
+use mid_brownie_testing::compute_midpoint;
 
 fn find_point(n: u64, mut noise: u64, decay: f64, seed: i64, iterations: usize) -> f64 {
     let max = noise as f64 / (1f64 - decay);

@@ -4,5 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-gxhash = { version = "3.4.1", default-features = false }
+cgmath = "0.18.0"
+gxhash = { version = "3.4.1" }
 plotters = "0.3.7"
+
+[[bin]]
+name = "2d"
+path = "src/2d.rs"
+
+[[bin]]
+name = "3d"
+path = "src/3d.rs"
