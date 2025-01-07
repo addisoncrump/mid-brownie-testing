@@ -2,6 +2,8 @@ use mid_brownie_testing::FractalNoise;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 
+pub use wasm_bindgen_rayon::init_thread_pool;
+
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
@@ -46,7 +48,7 @@ mod plot3d {
     use plotters::chart::ChartBuilder;
     use plotters::drawing::IntoDrawingArea;
     use plotters::prelude::{
-        BLACK, BLUE, FontDesc, FontFamily, FontStyle, ShapeStyle, SurfaceSeries,
+        FontDesc, FontFamily, FontStyle, ShapeStyle, SurfaceSeries, BLACK, BLUE,
     };
     use plotters::style::{Color, WHITE};
     use plotters_canvas::CanvasBackend;

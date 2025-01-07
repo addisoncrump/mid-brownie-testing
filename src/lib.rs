@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::hash::{BuildHasherDefault, Hash, Hasher};
@@ -34,11 +35,11 @@ impl<const N: usize> FractalNoise<N> {
         iter::once((start, base)).chain((1..(1 << N)).map(move |combo| {
             let mut target = start;
             target
-                .iter_mut()
+                .par_iter_mut()
                 .zip(0..N)
                 .for_each(|(n, o)| *n = n.add(self.midpoint * (combo >> o & 1)));
             let mut s = target;
-            s.iter_mut()
+            s.par_iter_mut()
                 .zip(0..N)
                 .for_each(|(n, o)| *n = n.overflowing_add(self.midpoint * (combo >> o & 1)).0);
             let f_val = self.values[&start];
@@ -109,15 +110,20 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
     let mut points = vec![([0u64; N], max / 2.0)];
     let lookup_or_compute = |points: &[([u64; N], f64)], midpoint: u64, target: [u64; N], noise| {
         points
-            .iter()
+            .par_iter()
             .copied()
-            .find(|(p, _)| *p == target)
+            .find_any(|(p, _)| *p == target)
             .unwrap_or_else(|| {
                 let nextpoint = midpoint << 1;
                 let f = target.map(|v| v.div(&midpoint).div(&2).mul(nextpoint));
-                let f_val = points.iter().copied().find(|(p, _)| *p == f).unwrap().1;
+                let f_val = points
+                    .par_iter()
+                    .copied()
+                    .find_any(|(p, _)| *p == f)
+                    .unwrap()
+                    .1;
                 let mut s = f;
-                s.iter_mut()
+                s.par_iter_mut()
                     .zip(f)
                     .zip(target)
                     .for_each(|((second, first), target)| {
@@ -134,20 +140,21 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
 
     let mut midpoint = 1u64.reverse_bits();
     for _ in 1.. {
-        if let Some((_, v)) = points.iter().find(|(p, _)| *p == n) {
+        if let Some((_, v)) = points.par_iter().find_any(|(p, _)| *p == n) {
             return *v;
         }
 
         // compute the next starting point
         let mut next = n;
-        next.iter_mut()
+        next.par_iter_mut()
             .zip(points[0].0)
             .for_each(|(n, p)| *n = (*n - p).div(&midpoint).mul(&midpoint).add(p));
         points = (0..(1 << N))
+            .into_par_iter()
             .map(|combo| {
                 let mut other = next;
                 other
-                    .iter_mut()
+                    .par_iter_mut()
                     .zip(0..N)
                     .for_each(|(n, o)| *n = n.overflowing_add(midpoint * (combo >> o & 1)).0);
                 lookup_or_compute(&points, midpoint, other, noise)
@@ -163,7 +170,7 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
     }
 
     // last chance
-    if let Some((_, v)) = points.iter().find(|(p, _)| *p == n) {
+    if let Some((_, v)) = points.par_iter().find_any(|(p, _)| *p == n) {
         return *v;
     }
     unreachable!("We must have computed n by now");
