@@ -1,3 +1,4 @@
 target
 *.gif
 /.idea/
+**/node_modules/

@@ -1,25 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Plotters WebAssembly Demo</title>
-</head>
-<body>
-<noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-<script src="./bootstrap.js"></script>
-<main>
-    <h1>Plotters WebAssembly Demo</h1>
-    <div id="coord"></div>
-    <canvas id="canvas" width="600" height="400"></canvas>
-    <div id="status">Loading WebAssembly...</div>
-    <div id="control">
+  </head>
+  <body>
+    <noscript
+      >This page contains webassembly and javascript content, please enable
+      javascript in your browser.</noscript
+    >
+    <script src="/bootstrap.js"></script>
+    <main>
+      <h1>Plotters WebAssembly Demo</h1>
+      <div id="coord"></div>
+      <canvas id="canvas" width="600" height="400"></canvas>
+      <div id="status">Loading WebAssembly...</div>
+      <div id="control">
         <div id="3d-control">
-            <label for="pitch">Pitch: </label> <input type="range" min="0" max="157" id="pitch" value="10"> <br/>
-            <label for="yaw">Yaw: </label> <input type="range" min="0" max="314" id="yaw" value="50"> <br/>
-            <label for="iterations">Iterations: </label> <input type="range" min="1" max="10" id="iterations" value="1">
+          <label for="pitch">Pitch: </label>
+          <input type="range" min="0" max="157" id="pitch" value="10" /> <br />
+          <label for="yaw">Yaw: </label>
+          <input type="range" min="0" max="314" id="yaw" value="50" /> <br />
+          <label for="iterations">Iterations: </label>
+          <input type="range" min="1" max="10" id="iterations" value="1" />
         </div>
-    </div>
-</main>
-</body>
+      </div>
+    </main>
+  </body>
 </html>
