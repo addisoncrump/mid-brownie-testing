@@ -14,6 +14,3 @@ plotters-canvas.workspace = true
 wasm-bindgen.workspace = true
 web-sys.workspace = true
 wee_alloc.workspace = true
-
-[profile.release]
-lto = true

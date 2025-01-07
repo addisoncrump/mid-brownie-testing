@@ -1,20 +1,19 @@
 use highway::HighwayHasher;
-use mid_brownie_testing::{FractalNoise, find_point};
+use mid_brownie_testing::{find_point, FractalNoise};
 use plotters::backend::BitMapBackend;
 use plotters::chart::{ChartBuilder, ChartContext};
-use plotters::coord::Shift;
 use plotters::coord::cartesian::Cartesian3d;
 use plotters::coord::types::{RangedCoordf64, RangedCoordu64};
+use plotters::coord::Shift;
 use plotters::drawing::{DrawingArea, IntoDrawingArea};
 use plotters::prelude::{FontFamily, FontStyle};
 use plotters::series::SurfaceSeries;
-use plotters::style::{BLACK, BLUE, Color, FontDesc, ShapeStyle, WHITE};
+use plotters::style::{Color, FontDesc, ShapeStyle, BLACK, BLUE, WHITE};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::error::Error;
 use std::hash::BuildHasherDefault;
-use std::ops::ControlFlow;
 use std::{env, iter};
 
 fn show_surface(
@@ -45,10 +44,10 @@ fn show_surface(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let seed = env::args().skip(1).next().map_or(0, |s| s.parse().unwrap());
+    let seed = env::args().nth(1).map_or(0, |s| s.parse().unwrap());
     const NOISE: u64 = 10000u64;
     const ITERATIONS: usize = 10;
-    let mut noise = NOISE;
+    let noise = NOISE;
     let decay = 0.5f64;
 
     let max = noise as f64 / (1f64 - decay);

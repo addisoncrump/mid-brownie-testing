@@ -98,9 +98,9 @@ pub fn compute_midpoint<const N: usize>(
     i1.hash(&mut hasher);
     i2.hash(&mut hasher);
     let sampled = (hasher.finish() % noise) as i64 - (noise >> 1) as i64;
-    let computed = (v1 + v2) / 2f64 + sampled as f64;
+    
 
-    computed
+    (v1 + v2) / 2f64 + sampled as f64
 }
 
 pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed: i64) -> f64 {

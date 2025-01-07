@@ -1,19 +1,18 @@
-use gxhash::{HashMap, HashMapExt};
 use highway::HighwayHasher;
-use mid_brownie_testing::{FractalNoise, find_point};
+use mid_brownie_testing::{find_point, FractalNoise};
 use plotters::backend::BitMapBackend;
 use plotters::chart::{ChartBuilder, ChartContext};
-use plotters::coord::Shift;
 use plotters::coord::types::{RangedCoordf64, RangedCoordu64};
+use plotters::coord::Shift;
 use plotters::drawing::{DrawingArea, IntoDrawingArea};
 use plotters::prelude::{Cartesian2d, FontFamily, FontStyle};
 use plotters::series::LineSeries;
-use plotters::style::{BLACK, Color, FontDesc, WHITE};
+use plotters::style::{Color, FontDesc, BLACK, WHITE};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
+use std::collections::HashMap;
 use std::error::Error;
 use std::hash::BuildHasherDefault;
-use std::ops::ControlFlow;
 use std::{env, iter};
 
 fn show_line(
@@ -37,7 +36,7 @@ fn show_line(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let seed = env::args().skip(1).next().map_or(0, |s| s.parse().unwrap());
+    let seed = env::args().nth(1).map_or(0, |s| s.parse().unwrap());
     const NOISE: u64 = 10000u64;
     const ITERATIONS: usize = 16;
     let decay = 0.5f64;
