@@ -10,7 +10,7 @@ use plotters::series::LineSeries;
 use plotters::style::{Color, FontDesc, BLACK, WHITE};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::hash::BuildHasherDefault;
 use std::{env, iter};
@@ -21,8 +21,9 @@ fn show_line(
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordu64, RangedCoordf64>>,
     values: &HashMap<[u64; 1], f64, BuildHasherDefault<HighwayHasher>>,
 ) -> Result<(), Box<dyn Error>> {
+    let values_sorted = values.iter().collect::<BTreeMap<_, _>>();
     let series = LineSeries::new(
-        values.iter().map(|(&[k], &v)| (k, v)),
+        values_sorted.into_iter().map(|(&[k], &v)| (k, v)),
         BLACK.stroke_width(5),
     );
     chart.draw_series(series)?;
@@ -47,12 +48,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let area = BitMapBackend::gif("2d.gif", (1080, 1080), 1_000)?.into_drawing_area();
     let values = loop {
-        area.fill(&WHITE)?;
-        let mut chart = ChartBuilder::on(&area).build_cartesian_2d(0..u64::MAX, 0f64..max)?;
-
         if !noise.step_midpoints()? {
             break noise.into_values();
         };
+        area.fill(&WHITE)?;
+
+        let mut chart = ChartBuilder::on(&area).build_cartesian_2d(0..u64::MAX, 0f64..max)?;
         show_line(&area, noise.iterations(), &mut chart, noise.values())?;
 
         if noise.iterations() > ITERATIONS {

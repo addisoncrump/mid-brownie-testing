@@ -56,14 +56,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let area = BitMapBackend::gif("3d.gif", (1080, 1080), 1_000)?.into_drawing_area();
     let values = loop {
-        area.fill(&WHITE)?;
-        let mut chart =
-            ChartBuilder::on(&area).build_cartesian_3d(0..u64::MAX, 0f64..max, 0..u64::MAX)?;
         let midpoint = noise.midpoint();
 
         if !noise.step_midpoints()? {
             break noise.into_values();
         };
+        area.fill(&WHITE)?;
+
+        let mut chart =
+            ChartBuilder::on(&area).build_cartesian_3d(0..u64::MAX, 0f64..max, 0..u64::MAX)?;
         show_surface(
             &area,
             midpoint,
