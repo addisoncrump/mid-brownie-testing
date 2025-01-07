@@ -4,7 +4,6 @@ class Chart {
 }
 
 const canvas = document.getElementById("canvas");
-const coord = document.getElementById("coord");
 const pitch = document.getElementById("pitch");
 const yaw = document.getElementById("yaw");
 const iterations = document.getElementById("iterations");
@@ -54,7 +53,6 @@ function updatePlot3d() {
     let pitch_value = Number(pitch.value) / 100.0;
     let iterations_value = Number(iterations.value);
     chart.plot3d(canvas, pitch_value, yaw_value, iterations_value);
-    coord.innerText = `Pitch:${pitch_value}, Yaw:${yaw_value}, Iterations:${iterations_value}`
 }
 
 /** Redraw currently selected plot. */
