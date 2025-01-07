@@ -49,6 +49,8 @@ function setupCanvas() {
 }
 
 function updatePlot3d() {
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
     let yaw_value = Number(yaw.value) / 100.0;
     let pitch_value = Number(pitch.value) / 100.0;
     let iterations_value = Number(iterations.value);

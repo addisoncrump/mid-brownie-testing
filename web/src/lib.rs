@@ -45,10 +45,9 @@ mod plot3d {
     use mid_brownie_testing::FractalNoise;
     use plotters::chart::ChartBuilder;
     use plotters::drawing::IntoDrawingArea;
-    use plotters::prelude::{
-        BLACK, BLUE, FontDesc, FontFamily, FontStyle, ShapeStyle, SurfaceSeries,
-    };
-    use plotters::style::{Color, WHITE};
+    use plotters::prelude::{ShapeStyle, SurfaceSeries};
+    use plotters::style::full_palette::GREY;
+    use plotters::style::Color;
     use plotters_canvas::CanvasBackend;
     use std::iter;
     use web_sys::HtmlCanvasElement;
@@ -64,7 +63,6 @@ mod plot3d {
         let area = CanvasBackend::with_canvas_object(canvas)
             .unwrap()
             .into_drawing_area();
-        area.fill(&WHITE)?;
 
         let mut chart =
             ChartBuilder::on(&area).build_cartesian_3d(0..u64::MAX, 0f64..max, 0..u64::MAX)?;
@@ -84,7 +82,7 @@ mod plot3d {
             iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
             |x, z| cache3d.values().get(&[x, z]).copied().unwrap(),
         )
-        .style(ShapeStyle::from(BLUE.mix(0.5)).stroke_width(0));
+        .style(ShapeStyle::from(GREY.mix(0.5)).stroke_width(0));
 
         chart
             .with_projection(|mut pb| {
