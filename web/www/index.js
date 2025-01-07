@@ -7,6 +7,7 @@ const canvas = document.getElementById("canvas");
 const pitch = document.getElementById("pitch");
 const yaw = document.getElementById("yaw");
 const iterations = document.getElementById("iterations");
+const seed = document.getElementById("seed");
 const status = document.getElementById("status");
 
 let chart = null;
@@ -28,9 +29,11 @@ function setupUI() {
     yaw.addEventListener("change", updatePlot);
     pitch.addEventListener("change", updatePlot);
     iterations.addEventListener("change", updatePlot);
+    seed.addEventListener("seed", setupCanvas);
     yaw.addEventListener("input", updatePlot);
     pitch.addEventListener("input", updatePlot);
     iterations.addEventListener("input", updatePlot);
+    seed.addEventListener("input", setupCanvas);
     window.addEventListener("resize", setupCanvas);
 }
 
@@ -39,12 +42,12 @@ function setupCanvas() {
     const dpr = window.devicePixelRatio || 1.0;
     const aspectRatio = canvas.width / canvas.height;
     const size = canvas.parentNode.offsetWidth * 0.8;
+    const seed_value = BigInt(seed.value)
     canvas.style.width = size + "px";
     canvas.style.height = size / aspectRatio + "px";
     canvas.width = size;
     canvas.height = size / aspectRatio;
-    chart = Chart.new(BigInt(10000), 0.5, BigInt(1))
-    iterations.value = 1;
+    chart = Chart.new(BigInt(10000), 0.5, seed_value)
     updatePlot();
 }
 
