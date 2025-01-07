@@ -1,4 +1,5 @@
 use gxhash::{HashMap, HashMapExt};
+use highway::HighwayHasher;
 use mid_brownie_testing::{FractalNoise, find_point};
 use plotters::backend::BitMapBackend;
 use plotters::chart::{ChartBuilder, ChartContext};
@@ -11,14 +12,15 @@ use plotters::style::{BLACK, Color, FontDesc, WHITE};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
 use std::error::Error;
+use std::hash::BuildHasherDefault;
 use std::ops::ControlFlow;
 use std::{env, iter};
 
 fn show_line(
     area: &DrawingArea<BitMapBackend, Shift>,
-    i: &usize,
+    i: usize,
     chart: &mut ChartContext<BitMapBackend, Cartesian2d<RangedCoordu64, RangedCoordf64>>,
-    values: &HashMap<[u64; 1], f64>,
+    values: &HashMap<[u64; 1], f64, BuildHasherDefault<HighwayHasher>>,
 ) -> Result<(), Box<dyn Error>> {
     let series = LineSeries::new(
         values.iter().map(|(&[k], &v)| (k, v)),
@@ -45,24 +47,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut noise = FractalNoise::<1>::new(max / 2.0, NOISE, decay, seed);
 
     let area = BitMapBackend::gif("2d.gif", (1080, 1080), 1_000)?.into_drawing_area();
-    let mut i = 1;
     let values = loop {
         area.fill(&WHITE)?;
         let mut chart = ChartBuilder::on(&area).build_cartesian_2d(0..u64::MAX, 0f64..max)?;
 
-        noise = match noise.step_midpoints()? {
-            ControlFlow::Continue(n) => {
-                show_line(&area, &i, &mut chart, n.values())?;
-                n
-            }
-            ControlFlow::Break(values) => {
-                show_line(&area, &i, &mut chart, &values)?;
-                break values;
-            }
+        if !noise.step_midpoints()? {
+            break noise.into_values();
         };
+        show_line(&area, noise.iterations(), &mut chart, noise.values())?;
 
-        i += 1;
-        if i > ITERATIONS {
+        if noise.iterations() > ITERATIONS {
             break noise.into_values();
         }
     };

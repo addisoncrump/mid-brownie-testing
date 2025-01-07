@@ -1,20 +1,23 @@
-use gxhash::{GxHasher, HashMap, HashMapExt};
+use std::collections::HashMap;
 use std::error::Error;
-use std::hash::{Hash, Hasher};
+use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::iter;
-use std::ops::{Add, ControlFlow, Div, Mul};
+use std::ops::{Add, Div, Mul};
+
+use highway::HighwayHasher;
 
 pub struct FractalNoise<const N: usize> {
-    values: HashMap<[u64; N], f64>,
+    values: HashMap<[u64; N], f64, BuildHasherDefault<HighwayHasher>>,
     midpoint: u64,
     noise: u64,
     decay: f64,
     seed: i64,
+    iterations: usize,
 }
 
 impl<const N: usize> FractalNoise<N> {
     pub fn new(initial: f64, noise: u64, decay: f64, seed: i64) -> Self {
-        let mut values = HashMap::new();
+        let mut values = HashMap::with_hasher(BuildHasherDefault::<HighwayHasher>::default());
         values.insert([0u64; N], initial);
         Self {
             values,
@@ -22,6 +25,7 @@ impl<const N: usize> FractalNoise<N> {
             noise,
             decay,
             seed,
+            iterations: 0,
         }
     }
 
@@ -45,9 +49,11 @@ impl<const N: usize> FractalNoise<N> {
         }))
     }
 
-    pub fn step_midpoints(
-        mut self,
-    ) -> Result<ControlFlow<HashMap<[u64; N], f64>, Self>, Box<dyn Error>> {
+    pub fn step_midpoints(&mut self) -> Result<bool, Box<dyn Error>> {
+        if self.noise == 0 {
+            return Ok(false);
+        }
+
         let next_values = self
             .values
             .keys()
@@ -57,25 +63,25 @@ impl<const N: usize> FractalNoise<N> {
         self.values = next_values;
 
         self.midpoint >>= 1;
-        let next_noise = (self.noise as f64 * self.decay) as u64;
-        Ok(if next_noise == 0 {
-            ControlFlow::Break(self.values)
-        } else {
-            self.noise = next_noise;
-            ControlFlow::Continue(self)
-        })
+        self.noise = (self.noise as f64 * self.decay) as u64;
+        self.iterations += 1;
+        Ok(true)
     }
 
-    pub fn values(&self) -> &HashMap<[u64; N], f64> {
+    pub fn values(&self) -> &HashMap<[u64; N], f64, BuildHasherDefault<HighwayHasher>> {
         &self.values
     }
 
-    pub fn into_values(self) -> HashMap<[u64; N], f64> {
+    pub fn into_values(self) -> HashMap<[u64; N], f64, BuildHasherDefault<HighwayHasher>> {
         self.values
     }
 
     pub fn midpoint(&self) -> u64 {
         self.midpoint
+    }
+
+    pub fn iterations(&self) -> usize {
+        self.iterations
     }
 }
 
@@ -87,7 +93,8 @@ pub fn compute_midpoint<const N: usize>(
     noise: u64,
     seed: i64,
 ) -> f64 {
-    let mut hasher = GxHasher::with_seed(seed);
+    let mut hasher = HighwayHasher::default();
+    hasher.write_i64(seed);
     i1.hash(&mut hasher);
     i2.hash(&mut hasher);
     let sampled = (hasher.finish() % noise) as i64 - (noise >> 1) as i64;
@@ -127,7 +134,7 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
 
     let mut midpoint = 1u64.reverse_bits();
     for _ in 1.. {
-        if let Some((_, v)) = points.iter().find(|(p, v)| *p == n) {
+        if let Some((_, v)) = points.iter().find(|(p, _)| *p == n) {
             return *v;
         }
 
@@ -156,7 +163,7 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
     }
 
     // last chance
-    if let Some((_, v)) = points.iter().find(|(p, v)| *p == n) {
+    if let Some((_, v)) = points.iter().find(|(p, _)| *p == n) {
         return *v;
     }
     unreachable!("We must have computed n by now");

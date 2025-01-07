@@ -1,4 +1,4 @@
-use gxhash::{HashMap, HashMapExt};
+use highway::HighwayHasher;
 use mid_brownie_testing::{FractalNoise, find_point};
 use plotters::backend::BitMapBackend;
 use plotters::chart::{ChartBuilder, ChartContext};
@@ -6,24 +6,26 @@ use plotters::coord::Shift;
 use plotters::coord::cartesian::Cartesian3d;
 use plotters::coord::types::{RangedCoordf64, RangedCoordu64};
 use plotters::drawing::{DrawingArea, IntoDrawingArea};
-use plotters::prelude::{Cartesian2d, FontFamily, FontStyle, LineSeries};
+use plotters::prelude::{FontFamily, FontStyle};
 use plotters::series::SurfaceSeries;
 use plotters::style::{BLACK, BLUE, Color, FontDesc, ShapeStyle, WHITE};
 use rand::seq::IteratorRandom;
 use rand::thread_rng;
+use std::collections::HashMap;
 use std::error::Error;
+use std::hash::BuildHasherDefault;
 use std::ops::ControlFlow;
 use std::{env, iter};
 
 fn show_surface(
     area: &DrawingArea<BitMapBackend, Shift>,
     midpoint: u64,
-    i: &usize,
+    i: usize,
     chart: &mut ChartContext<
         BitMapBackend,
         Cartesian3d<RangedCoordu64, RangedCoordf64, RangedCoordu64>,
     >,
-    values: &HashMap<[u64; 2], f64>,
+    values: &HashMap<[u64; 2], f64, BuildHasherDefault<HighwayHasher>>,
 ) -> Result<(), Box<dyn Error>> {
     let series = SurfaceSeries::xoz(
         iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
@@ -54,26 +56,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut noise = FractalNoise::<2>::new(max / 2.0, noise, decay, seed);
 
     let area = BitMapBackend::gif("3d.gif", (1080, 1080), 1_000)?.into_drawing_area();
-    let mut i = 1;
     let values = loop {
         area.fill(&WHITE)?;
         let mut chart =
             ChartBuilder::on(&area).build_cartesian_3d(0..u64::MAX, 0f64..max, 0..u64::MAX)?;
         let midpoint = noise.midpoint();
 
-        noise = match noise.step_midpoints()? {
-            ControlFlow::Continue(n) => {
-                show_surface(&area, midpoint, &i, &mut chart, n.values())?;
-                n
-            }
-            ControlFlow::Break(values) => {
-                show_surface(&area, midpoint, &i, &mut chart, &values)?;
-                break values;
-            }
+        if !noise.step_midpoints()? {
+            break noise.into_values();
         };
+        show_surface(
+            &area,
+            midpoint,
+            noise.iterations(),
+            &mut chart,
+            noise.values(),
+        )?;
 
-        i += 1;
-        if i > ITERATIONS {
+        if noise.iterations() > ITERATIONS {
             break noise.into_values();
         }
     };

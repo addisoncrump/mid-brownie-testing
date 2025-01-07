@@ -1,0 +1,19 @@
+[package]
+name = "local"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mid-brownie-testing = { path = ".." }
+
+highway.workspace = true
+plotters.workspace = true
+rand.workspace = true
+
+[[bin]]
+name = "2d"
+path = "src/2d.rs"
+
+[[bin]]
+name = "3d"
+path = "src/3d.rs"

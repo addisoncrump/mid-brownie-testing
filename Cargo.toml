@@ -3,23 +3,17 @@ name = "mid-brownie-testing"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-web = ["plotters-canvas"]
-
 [dependencies]
-gxhash = { version = "3.4.1" }
+highway.workspace = true
+
+[workspace]
+members = [".", "web", "local"]
+
+[workspace.dependencies]
+highway = "1.2.0"
 plotters = "0.3.7"
-plotters-canvas = { version = "0.3.0", optional = true }
+plotters-canvas = "0.3.0"
 rand = "0.8.5"
-
-[[bin]]
-name = "2d-web"
-path = "src/2d-web.rs"
-
-[[bin]]
-name = "2d"
-path = "src/2d.rs"
-
-[[bin]]
-name = "3d"
-path = "src/3d.rs"
+wasm-bindgen = "0.2.99"
+web-sys = { version = "0.3.76", features = ["HtmlCanvasElement"] }
+wee_alloc = "0.4.5"

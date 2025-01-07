@@ -1,0 +1,19 @@
+[package]
+name = "web"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+mid-brownie-testing = { path = ".." }
+
+plotters.workspace = true
+plotters-canvas.workspace = true
+wasm-bindgen.workspace = true
+web-sys.workspace = true
+wee_alloc.workspace = true
+
+[profile.release]
+lto = true
