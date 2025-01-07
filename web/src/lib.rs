@@ -45,9 +45,8 @@ mod plot3d {
     use mid_brownie_testing::FractalNoise;
     use plotters::chart::ChartBuilder;
     use plotters::drawing::IntoDrawingArea;
-    use plotters::prelude::{ShapeStyle, SurfaceSeries};
-    use plotters::style::full_palette::GREY;
-    use plotters::style::Color;
+    use plotters::prelude::SurfaceSeries;
+    use plotters::style::{Color, RGBColor};
     use plotters_canvas::CanvasBackend;
     use std::iter;
     use web_sys::HtmlCanvasElement;
@@ -77,12 +76,16 @@ mod plot3d {
         println!("showing {iterations} iterations");
         let midpoint = 1u64.reverse_bits() >> iterations;
 
+        let graymap = |y: &f64| {
+            let grayness = ((512.0) * ((1.0 + (*y - max) / max).powi(3))) as u8;
+            RGBColor(grayness, grayness, grayness).filled()
+        };
         let series = SurfaceSeries::xoz(
             iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
             iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
             |x, z| cache3d.values().get(&[x, z]).copied().unwrap(),
         )
-        .style(ShapeStyle::from(GREY.mix(0.5)).stroke_width(0));
+        .style_func(&graymap);
 
         chart
             .with_projection(|mut pb| {
