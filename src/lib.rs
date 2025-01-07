@@ -29,7 +29,7 @@ impl<const N: usize> FractalNoise<N> {
         }
     }
 
-    fn next_points(&self, start: [u64; N]) -> impl Iterator<Item = ([u64; N], f64)> {
+    fn next_points(&self, start: [u64; N]) -> impl Iterator<Item = ([u64; N], f64)> + use<'_, N> {
         let base = self.values[&start];
         iter::once((start, base)).chain((1..(1 << N)).map(move |combo| {
             let mut target = start;
