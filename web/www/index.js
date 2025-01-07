@@ -8,6 +8,8 @@ const pitch = document.getElementById("pitch");
 const yaw = document.getElementById("yaw");
 const iterations = document.getElementById("iterations");
 const seed = document.getElementById("seed");
+const noise = document.getElementById("noise");
+const decay = document.getElementById("decay");
 const status = document.getElementById("status");
 
 let chart = null;
@@ -29,25 +31,30 @@ function setupUI() {
     yaw.addEventListener("change", updatePlot);
     pitch.addEventListener("change", updatePlot);
     iterations.addEventListener("change", updatePlot);
-    seed.addEventListener("seed", setupCanvas);
+    seed.addEventListener("change", setupCanvas);
+    noise.addEventListener("change", setupCanvas);
+    decay.addEventListener("change", setupCanvas);
     yaw.addEventListener("input", updatePlot);
     pitch.addEventListener("input", updatePlot);
     iterations.addEventListener("input", updatePlot);
     seed.addEventListener("input", setupCanvas);
+    noise.addEventListener("input", setupCanvas);
+    decay.addEventListener("input", setupCanvas);
     window.addEventListener("resize", setupCanvas);
 }
 
 /** Setup canvas to properly handle high DPI and redraw current plot. */
 function setupCanvas() {
-    const dpr = window.devicePixelRatio || 1.0;
     const aspectRatio = canvas.width / canvas.height;
     const size = canvas.parentNode.offsetWidth * 0.8;
     const seed_value = BigInt(seed.value)
+    const noise_value = BigInt(noise.value)
+    const decay_value = Number(decay.value) / decay.max
     canvas.style.width = size + "px";
     canvas.style.height = size / aspectRatio + "px";
     canvas.width = size;
     canvas.height = size / aspectRatio;
-    chart = Chart.new(BigInt(10000), 0.5, seed_value)
+    chart = Chart.new(noise_value, decay_value, seed_value)
     updatePlot();
 }
 
