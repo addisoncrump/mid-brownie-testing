@@ -3,10 +3,18 @@ name = "mid-brownie-testing"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+web = ["plotters-canvas"]
+
 [dependencies]
-cgmath = "0.18.0"
 gxhash = { version = "3.4.1" }
 plotters = "0.3.7"
+plotters-canvas = { version = "0.3.0", optional = true }
+rand = "0.8.5"
+
+[[bin]]
+name = "2d-web"
+path = "src/2d-web.rs"
 
 [[bin]]
 name = "2d"
