@@ -127,12 +127,14 @@ mod plot3d {
                     let z = z.next_multiple_of(midpoint) - midpoint;
                     [
                         [x, z],
+                        [x.overflowing_add(midpoint).0, z],
+                        [x, z.overflowing_add(midpoint).0],
                         [x.overflowing_add(midpoint).0, z.overflowing_add(midpoint).0],
                     ]
                     .into_iter()
                     .filter_map(|p| cache3d.values().get(&p))
-                    .sum::<f64>()
-                        / 2.0
+                    .max_by(|f1, f2| f1.total_cmp(f2))
+                    .unwrap()
                         + upper_bound::<2>(noise, decay)
                 },
             )
