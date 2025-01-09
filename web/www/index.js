@@ -48,15 +48,16 @@ function setupUI() {
 
 /** Setup canvas to properly handle high DPI and redraw current plot. */
 function setupCanvas() {
+    const dpr = window.devicePixelRatio || 1.0;
+    const size = canvas.parentNode.offsetWidth;
     const aspectRatio = canvas.width / canvas.height;
-    const size = canvas.parentNode.offsetWidth * 0.8;
     const seed_value = BigInt(seed.value)
     const noise_value = BigInt(noise.value)
     const decay_value = Number(decay.value) / decay.max
     canvas.style.width = size + "px";
     canvas.style.height = size / aspectRatio + "px";
-    canvas.width = size;
-    canvas.height = size / aspectRatio;
+    canvas.width = dpr * size;
+    canvas.height = dpr * size / aspectRatio;
     chart = Chart.new(noise_value, decay_value, seed_value)
     updatePlot();
 }
