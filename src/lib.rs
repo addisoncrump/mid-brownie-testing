@@ -141,7 +141,7 @@ where
     find_point_inner::<[([u64; N], f64); 1 << N], N>(n, noise, decay, seed)
 }
 
-pub fn find_point_inner<PA: ValidPointsArray<([u64; N], f64), N>, const N: usize>(
+fn find_point_inner<PA: ValidPointsArray<([u64; N], f64), N>, const N: usize>(
     n: [u64; N],
     mut noise: u64,
     decay: f64,
@@ -208,4 +208,16 @@ pub fn find_point_inner<PA: ValidPointsArray<([u64; N], f64), N>, const N: usize
         return *v;
     }
     unreachable!("We must have computed n by now");
+}
+
+pub fn upper_bound<const N: usize>(noise: u64, decay: f64) -> f64 {
+    // the bound tightness here could theoretically be improved with knowing the dimensions
+    // however, I am not smart enough to work out a proper bound on dimensions > 2
+    // for this reason, I just fallback to the upper bound
+    let noise = noise as f64;
+    if N == 1 {
+        (noise / (1.0 - decay) + noise) / 3.0
+    } else {
+        noise / (1.0 - decay)
+    }
 }

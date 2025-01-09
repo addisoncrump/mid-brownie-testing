@@ -13,6 +13,8 @@ pub type DrawResult<T> = Result<T, Box<dyn std::error::Error>>;
 #[wasm_bindgen]
 pub struct Chart {
     cache: FractalNoise<2>,
+    initial_noise: u64,
+    initial_decay: f64,
     max: f64,
 }
 
@@ -23,6 +25,8 @@ impl Chart {
         let initial = max / 2.0;
         Self {
             cache: FractalNoise::new(initial, noise, decay, seed),
+            initial_noise: noise,
+            initial_decay: decay,
             max,
         }
     }
@@ -34,19 +38,28 @@ impl Chart {
         yaw: f64,
         iterations: usize,
     ) -> Result<(), JsValue> {
-        plot3d::draw(canvas, &mut self.cache, pitch, yaw, self.max, iterations)
-            .map_err(|err| err.to_string())?;
+        plot3d::draw(
+            canvas,
+            &mut self.cache,
+            self.initial_noise,
+            self.initial_decay,
+            pitch,
+            yaw,
+            self.max,
+            iterations,
+        )
+        .map_err(|err| err.to_string())?;
         Ok(())
     }
 }
 
 mod plot3d {
     use crate::DrawResult;
-    use mid_brownie_testing::FractalNoise;
+    use mid_brownie_testing::{upper_bound, FractalNoise};
     use plotters::chart::ChartBuilder;
     use plotters::drawing::IntoDrawingArea;
     use plotters::prelude::SurfaceSeries;
-    use plotters::style::{Color, RGBColor};
+    use plotters::style::{Color, RGBColor, RED};
     use plotters_canvas::CanvasBackend;
     use std::iter;
     use web_sys::HtmlCanvasElement;
@@ -54,6 +67,8 @@ mod plot3d {
     pub fn draw(
         canvas: HtmlCanvasElement,
         cache3d: &mut FractalNoise<2>,
+        mut noise: u64,
+        decay: f64,
         pitch: f64,
         yaw: f64,
         max: f64,
@@ -95,6 +110,30 @@ mod plot3d {
                 pb.into_matrix()
             })
             .draw_series(series)?;
+
+        for _ in 0..iterations {
+            noise = (noise as f64 * decay) as u64;
+        }
+
+        let series = SurfaceSeries::xoz(
+            iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
+            iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
+            |x, z| {
+                [
+                    [x, z],
+                    [x, z.overflowing_add(midpoint).0],
+                    [x.overflowing_add(midpoint).0, z],
+                    [x.overflowing_add(midpoint).0, z.overflowing_add(midpoint).0],
+                ]
+                .into_iter()
+                .filter_map(|p| cache3d.values().get(&p))
+                .max_by(|f1, f2| f1.total_cmp(f2))
+                .unwrap()
+                    + upper_bound::<2>(noise, decay)
+            },
+        )
+        .style(&RED.mix(0.1));
+        chart.draw_series(series)?;
 
         Ok(())
     }
