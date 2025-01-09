@@ -120,19 +120,19 @@ mod plot3d {
             }
 
             let series = SurfaceSeries::xoz(
-                iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
-                iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
+                iter::successors(Some(midpoint / 2), |s: &u64| s.checked_add(midpoint)),
+                iter::successors(Some(midpoint / 2), |s: &u64| s.checked_add(midpoint)),
                 |x, z| {
+                    let x = x.next_multiple_of(midpoint) - midpoint;
+                    let z = z.next_multiple_of(midpoint) - midpoint;
                     [
                         [x, z],
-                        [x, z.overflowing_add(midpoint).0],
-                        [x.overflowing_add(midpoint).0, z],
                         [x.overflowing_add(midpoint).0, z.overflowing_add(midpoint).0],
                     ]
                     .into_iter()
                     .filter_map(|p| cache3d.values().get(&p))
-                    .max_by(|f1, f2| f1.total_cmp(f2))
-                    .unwrap()
+                    .sum::<f64>()
+                        / 2.0
                         + upper_bound::<2>(noise, decay)
                 },
             )
