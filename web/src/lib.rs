@@ -34,6 +34,7 @@ impl Chart {
     pub fn plot3d(
         &mut self,
         canvas: HtmlCanvasElement,
+        show_upper_bound: bool,
         pitch: f64,
         yaw: f64,
         iterations: usize,
@@ -41,6 +42,7 @@ impl Chart {
         plot3d::draw(
             canvas,
             &mut self.cache,
+            show_upper_bound,
             self.initial_noise,
             self.initial_decay,
             pitch,
@@ -67,6 +69,7 @@ mod plot3d {
     pub fn draw(
         canvas: HtmlCanvasElement,
         cache3d: &mut FractalNoise<2>,
+        show_upper_bound: bool,
         mut noise: u64,
         decay: f64,
         pitch: f64,
@@ -111,29 +114,31 @@ mod plot3d {
             })
             .draw_series(series)?;
 
-        for _ in 0..iterations {
-            noise = (noise as f64 * decay) as u64;
-        }
+        if show_upper_bound {
+            for _ in 0..iterations {
+                noise = (noise as f64 * decay) as u64;
+            }
 
-        let series = SurfaceSeries::xoz(
-            iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
-            iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
-            |x, z| {
-                [
-                    [x, z],
-                    [x, z.overflowing_add(midpoint).0],
-                    [x.overflowing_add(midpoint).0, z],
-                    [x.overflowing_add(midpoint).0, z.overflowing_add(midpoint).0],
-                ]
-                .into_iter()
-                .filter_map(|p| cache3d.values().get(&p))
-                .max_by(|f1, f2| f1.total_cmp(f2))
-                .unwrap()
-                    + upper_bound::<2>(noise, decay)
-            },
-        )
-        .style(&RED.mix(0.1));
-        chart.draw_series(series)?;
+            let series = SurfaceSeries::xoz(
+                iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
+                iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
+                |x, z| {
+                    [
+                        [x, z],
+                        [x, z.overflowing_add(midpoint).0],
+                        [x.overflowing_add(midpoint).0, z],
+                        [x.overflowing_add(midpoint).0, z.overflowing_add(midpoint).0],
+                    ]
+                    .into_iter()
+                    .filter_map(|p| cache3d.values().get(&p))
+                    .max_by(|f1, f2| f1.total_cmp(f2))
+                    .unwrap()
+                        + upper_bound::<2>(noise, decay)
+                },
+            )
+            .style(&RED.mix(0.1));
+            chart.draw_series(series)?;
+        }
 
         Ok(())
     }

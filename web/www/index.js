@@ -11,6 +11,7 @@ const seed = document.getElementById("seed");
 const noise = document.getElementById("noise");
 const decay = document.getElementById("decay");
 const status = document.getElementById("status");
+const bound = document.getElementById("bound");
 
 let chart = null;
 
@@ -31,12 +32,14 @@ function setupUI() {
     yaw.addEventListener("change", updatePlot);
     pitch.addEventListener("change", updatePlot);
     iterations.addEventListener("change", updatePlot);
+    bound.addEventListener("change", updatePlot);
     seed.addEventListener("change", setupCanvas);
     noise.addEventListener("change", setupCanvas);
     decay.addEventListener("change", setupCanvas);
     yaw.addEventListener("input", updatePlot);
     pitch.addEventListener("input", updatePlot);
     iterations.addEventListener("input", updatePlot);
+    bound.addEventListener("input", updatePlot);
     seed.addEventListener("input", setupCanvas);
     noise.addEventListener("input", setupCanvas);
     decay.addEventListener("input", setupCanvas);
@@ -61,10 +64,11 @@ function setupCanvas() {
 function updatePlot3d() {
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
-    let yaw_value = Number(yaw.value) / 100.0;
+    let bound_value = Boolean(bound.checked);
     let pitch_value = Number(pitch.value) / 100.0;
+    let yaw_value = Number(yaw.value) / 100.0;
     let iterations_value = Number(iterations.value);
-    chart.plot3d(canvas, pitch_value, yaw_value, iterations_value);
+    chart.plot3d(canvas, bound_value, pitch_value, yaw_value, iterations_value);
 }
 
 /** Redraw currently selected plot. */
