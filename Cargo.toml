@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 highway.workspace = true
 
+[build-dependencies]
+rustversion.workspace = true
+
 [workspace]
 members = [".", "web", "local"]
 
@@ -14,6 +17,7 @@ highway = "1.2.0"
 plotters = "0.3.7"
 plotters-canvas = "0.3.0"
 rand = "0.8.5"
+rustversion = "1.0"
 wasm-bindgen = "0.2.99"
 web-sys = { version = "0.3.76", features = ["CanvasRenderingContext2d"] }
 wee_alloc = "0.4.5"

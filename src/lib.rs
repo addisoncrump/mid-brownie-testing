@@ -1,8 +1,10 @@
+#![cfg_attr(nightly, feature(generic_const_exprs))]
+
 use std::collections::HashMap;
 use std::error::Error;
 use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::iter;
-use std::ops::{Add, Div, Mul};
+use std::ops::{Add, Div, IndexMut, Mul};
 
 use highway::HighwayHasher;
 
@@ -98,15 +100,56 @@ pub fn compute_midpoint<const N: usize>(
     i1.hash(&mut hasher);
     i2.hash(&mut hasher);
     let sampled = (hasher.finish() % noise) as i64 - (noise >> 1) as i64;
-    
 
     (v1 + v2) / 2f64 + sampled as f64
 }
 
-pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed: i64) -> f64 {
+pub trait ValidPointsArray<T, const N: usize>: IndexMut<usize, Output = T> + AsRef<[T]> {
+    fn init(source: impl Iterator<Item = T>) -> Self;
+}
+
+impl<T, const N: usize> ValidPointsArray<T, N> for Vec<T> {
+    fn init(source: impl Iterator<Item = T>) -> Self {
+        source.collect()
+    }
+}
+
+#[cfg(nightly)]
+impl<T, const N: usize> ValidPointsArray<T, N> for [T; 1 << N]
+where
+    [T; 1 << N]:,
+    T: Copy,
+{
+    fn init(mut source: impl Iterator<Item = T>) -> Self {
+        let next = source.next().unwrap();
+        let mut result = [next; 1 << N];
+        result[1..].iter_mut().zip(source).for_each(|(r, s)| *r = s);
+        result
+    }
+}
+
+#[cfg(not(nightly))]
+pub fn find_point<const N: usize>(n: [u64; N], noise: u64, decay: f64, seed: i64) -> f64 {
+    find_point_inner::<Vec<([u64; N], f64)>, N>(n, noise, decay, seed)
+}
+
+#[cfg(nightly)]
+pub fn find_point<const N: usize>(n: [u64; N], noise: u64, decay: f64, seed: i64) -> f64
+where
+    [(); 1 << N]:,
+{
+    find_point_inner::<[([u64; N], f64); 1 << N], N>(n, noise, decay, seed)
+}
+
+pub fn find_point_inner<PA: ValidPointsArray<([u64; N], f64), N>, const N: usize>(
+    n: [u64; N],
+    mut noise: u64,
+    decay: f64,
+    seed: i64,
+) -> f64 {
     let max = noise as f64 / (1f64 - decay);
 
-    let mut points = vec![([0u64; N], max / 2.0)];
+    let mut points = PA::init(iter::once(([0u64; N], max / 2.0)));
     let lookup_or_compute = |points: &[([u64; N], f64)], midpoint: u64, target: [u64; N], noise| {
         points
             .iter()
@@ -134,7 +177,7 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
 
     let mut midpoint = 1u64.reverse_bits();
     for _ in 1.. {
-        if let Some((_, v)) = points.iter().find(|(p, _)| *p == n) {
+        if let Some((_, v)) = points.as_ref().iter().find(|(p, _)| *p == n) {
             return *v;
         }
 
@@ -143,16 +186,14 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
         next.iter_mut()
             .zip(points[0].0)
             .for_each(|(n, p)| *n = (*n - p).div(&midpoint).mul(&midpoint).add(p));
-        points = (0..(1 << N))
-            .map(|combo| {
-                let mut other = next;
-                other
-                    .iter_mut()
-                    .zip(0..N)
-                    .for_each(|(n, o)| *n = n.overflowing_add(midpoint * (combo >> o & 1)).0);
-                lookup_or_compute(&points, midpoint, other, noise)
-            })
-            .collect::<Vec<_>>();
+        points = PA::init((0..(1 << N)).map(|combo| {
+            let mut other = next;
+            other
+                .iter_mut()
+                .zip(0..N)
+                .for_each(|(n, o)| *n = n.overflowing_add(midpoint * (combo >> o & 1)).0);
+            lookup_or_compute(points.as_ref(), midpoint, other, noise)
+        }));
 
         midpoint >>= 1;
         let next_noise = (noise as f64 * decay) as u64;
@@ -163,7 +204,7 @@ pub fn find_point<const N: usize>(n: [u64; N], mut noise: u64, decay: f64, seed:
     }
 
     // last chance
-    if let Some((_, v)) = points.iter().find(|(p, _)| *p == n) {
+    if let Some((_, v)) = points.as_ref().iter().find(|(p, _)| *p == n) {
         return *v;
     }
     unreachable!("We must have computed n by now");

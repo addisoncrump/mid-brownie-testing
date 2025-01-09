@@ -430,6 +430,7 @@ name = "mid-brownie-testing"
 version = "0.1.0"
 dependencies = [
  "highway",
+ "rustversion",
 ]
 
 [[package]]
@@ -635,6 +636,12 @@ checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver",
 ]
+
+[[package]]
+name = "rustversion"
+version = "1.0.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7c45b9784283f1b2e7fb61b42047c2fd678ef0960d4f6f1eba131594cc369d4"
 
 [[package]]
 name = "same-file"
