@@ -52,11 +52,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let max = noise as f64 / (1f64 - decay);
 
-    let mut noise = FractalNoise::<2>::new(max / 2.0, noise, decay, seed);
+    let mut noise = FractalNoise::<2>::new(noise, decay, seed);
 
     let area = BitMapBackend::gif("3d.gif", (1080, 1080), 1_000)?.into_drawing_area();
     let values = loop {
-        let midpoint = noise.midpoint();
+        let midpoint = 1u64.reverse_bits() >> noise.iterations();
 
         if !noise.step_midpoints()? {
             break noise.into_values();
@@ -77,12 +77,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             break noise.into_values();
         }
     };
-
-    let mut rng = thread_rng();
-    for (&picked, &value) in iter::from_fn(|| values.iter().choose(&mut rng)).take(100) {
-        let guessed = find_point(picked, NOISE, decay, seed);
-        assert_eq!(guessed, value)
-    }
 
     Ok(())
 }

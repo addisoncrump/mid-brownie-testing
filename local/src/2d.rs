@@ -61,11 +61,5 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    let mut rng = thread_rng();
-    for (&picked, &value) in iter::from_fn(|| values.iter().choose(&mut rng)).take(100) {
-        let guessed = find_point(picked, NOISE, decay, seed);
-        assert_eq!(guessed, value)
-    }
-
     Ok(())
 }

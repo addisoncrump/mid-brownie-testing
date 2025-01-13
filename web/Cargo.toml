@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 [dependencies]
 mid-brownie-testing = { path = ".." }
 
+cgmath.workspace = true
 plotters.workspace = true
 plotters-canvas.workspace = true
 wasm-bindgen.workspace = true

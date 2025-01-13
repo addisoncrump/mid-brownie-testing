@@ -1,4 +1,7 @@
+use cgmath::num_traits::{FloatConst, Signed};
+use cgmath::{AbsDiffEq, Angle, InnerSpace, Transform, Zero};
 use mid_brownie_testing::FractalNoise;
+use plotters::style::RGBColor;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 
@@ -13,22 +16,13 @@ pub type DrawResult<T> = Result<T, Box<dyn std::error::Error>>;
 #[wasm_bindgen]
 pub struct Chart {
     cache: FractalNoise<2>,
-    initial_noise: u64,
-    initial_decay: f64,
-    max: f64,
 }
 
 #[wasm_bindgen]
 impl Chart {
-    pub fn new(noise: u64, decay: f64, seed: i64) -> Self {
-        let max = noise as f64 / (1f64 - decay);
-        let initial = max / 2.0;
-        Self {
-            cache: FractalNoise::new(initial, noise, decay, seed),
-            initial_noise: noise,
-            initial_decay: decay,
-            max,
-        }
+    pub fn new(noise: u32, decay: f64, seed: i64) -> Self {
+        let cache = FractalNoise::new(noise, decay, seed);
+        Self { cache }
     }
 
     pub fn plot3d(
@@ -43,11 +37,8 @@ impl Chart {
             canvas,
             &mut self.cache,
             show_upper_bound,
-            self.initial_noise,
-            self.initial_decay,
             pitch,
             yaw,
-            self.max,
             iterations,
         )
         .map_err(|err| err.to_string())?;
@@ -57,11 +48,11 @@ impl Chart {
 
 mod plot3d {
     use crate::DrawResult;
-    use mid_brownie_testing::{upper_bound, FractalNoise};
+    use mid_brownie_testing::FractalNoise;
     use plotters::chart::ChartBuilder;
     use plotters::drawing::IntoDrawingArea;
     use plotters::prelude::SurfaceSeries;
-    use plotters::style::{Color, RGBColor, RED};
+    use plotters::style::{Color, RED};
     use plotters_canvas::CanvasBackend;
     use std::iter;
     use web_sys::HtmlCanvasElement;
@@ -70,19 +61,17 @@ mod plot3d {
         canvas: HtmlCanvasElement,
         cache3d: &mut FractalNoise<2>,
         show_upper_bound: bool,
-        mut noise: u64,
-        decay: f64,
         pitch: f64,
         yaw: f64,
-        max: f64,
         iterations: usize,
     ) -> DrawResult<()> {
         let area = CanvasBackend::with_canvas_object(canvas)
             .unwrap()
             .into_drawing_area();
+        let max = cache3d.upper_bound(0);
 
         let mut chart =
-            ChartBuilder::on(&area).build_cartesian_3d(0..u64::MAX, 0f64..max, 0..u64::MAX)?;
+            ChartBuilder::on(&area).build_cartesian_3d(0..u32::MAX, 0f64..max, 0..u32::MAX)?;
 
         while cache3d.iterations() < iterations {
             if !cache3d.step_midpoints()? {
@@ -92,15 +81,12 @@ mod plot3d {
 
         let iterations = iterations.min(cache3d.iterations()) - 1;
         println!("showing {iterations} iterations");
-        let midpoint = 1u64.reverse_bits() >> iterations;
+        let midpoint = 1u32.reverse_bits() >> iterations;
 
-        let graymap = |y: &f64| {
-            let grayness = ((512.0) * ((1.0 + (*y - max) / max).powi(3))) as u8;
-            RGBColor(grayness, grayness, grayness).filled()
-        };
+        let graymap = |y: &f64| super::graymap(y, max).filled();
         let series = SurfaceSeries::xoz(
-            iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
-            iter::successors(Some(0), |s: &u64| s.checked_add(midpoint)),
+            iter::successors(Some(0), |s: &u32| s.checked_add(midpoint)),
+            iter::successors(Some(0), |s: &u32| s.checked_add(midpoint)),
             |x, z| cache3d.values().get(&[x, z]).copied().unwrap(),
         )
         .style_func(&graymap);
@@ -115,13 +101,11 @@ mod plot3d {
             .draw_series(series)?;
 
         if show_upper_bound {
-            for _ in 0..iterations {
-                noise = (noise as f64 * decay) as u64;
-            }
+            let upper = cache3d.upper_bound(iterations);
 
             let series = SurfaceSeries::xoz(
-                iter::successors(Some(midpoint / 2), |s: &u64| s.checked_add(midpoint)),
-                iter::successors(Some(midpoint / 2), |s: &u64| s.checked_add(midpoint)),
+                iter::successors(Some(midpoint / 2), |s: &u32| s.checked_add(midpoint)),
+                iter::successors(Some(midpoint / 2), |s: &u32| s.checked_add(midpoint)),
                 |x, z| {
                     let x = x.next_multiple_of(midpoint) - midpoint;
                     let z = z.next_multiple_of(midpoint) - midpoint;
@@ -135,7 +119,7 @@ mod plot3d {
                     .filter_map(|p| cache3d.values().get(&p))
                     .max_by(|f1, f2| f1.total_cmp(f2))
                     .unwrap()
-                        + upper_bound::<2>(noise, decay)
+                        + upper
                 },
             )
             .style(&RED.mix(0.1));
@@ -144,4 +128,9 @@ mod plot3d {
 
         Ok(())
     }
+}
+
+fn graymap(y: &f64, max: f64) -> RGBColor {
+    let grayness = ((512.0) * ((1.0 + (*y - max) / max).powi(3))) as u8;
+    RGBColor(grayness, grayness, grayness)
 }

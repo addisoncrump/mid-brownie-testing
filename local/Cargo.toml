@@ -6,9 +6,11 @@ edition = "2021"
 [dependencies]
 mid-brownie-testing = { path = ".." }
 
+cgmath.workspace = true
 highway.workspace = true
 plotters.workspace = true
 rand.workspace = true
+rayon.workspace = true
 
 [[bin]]
 name = "2d"
@@ -17,3 +19,7 @@ path = "src/2d.rs"
 [[bin]]
 name = "3d"
 path = "src/3d.rs"
+
+[[bin]]
+name = "raytrace"
+path = "src/raytrace.rs"

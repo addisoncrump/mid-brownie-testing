@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+cgmath.workspace = true
 highway.workspace = true
 
 [build-dependencies]
@@ -13,10 +14,12 @@ rustversion.workspace = true
 members = [".", "web", "local"]
 
 [workspace.dependencies]
+cgmath = { git = "https://github.com/rustgd/cgmath.git" }
 highway = "1.2.0"
 plotters = "0.3.7"
 plotters-canvas = "0.3.0"
 rand = "0.8.5"
+rayon = "1.10.0"
 rustversion = "1.0"
 wasm-bindgen = "0.2.99"
 web-sys = { version = "0.3.76", features = ["CanvasRenderingContext2d"] }
