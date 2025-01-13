@@ -1,6 +1,6 @@
 #![cfg_attr(nightly, feature(generic_const_exprs))]
 
-use cgmath::{AbsDiffEq, InnerSpace, Point3, Vector3};
+use cgmath::{AbsDiffEq, InnerSpace, Point3, Vector3, Zero};
 use std::collections::HashMap as StdHashMap;
 use std::error::Error;
 use std::hash::{BuildHasherDefault, Hash, Hasher};
@@ -151,8 +151,9 @@ impl<const N: usize> FractalNoise<N> {
         &mut self,
         point: [u32; N],
         height: f64,
-    ) -> (bool, RangeInclusive<f64>, [u32; N], u32) {
-        self.cached_bounds_for_inner::<Vec<([u32; N], f64)>>(point, height)
+        iterations: usize,
+    ) -> (bool, RangeInclusive<f64>, [u32; N], usize, u32) {
+        self.cached_bounds_for_inner::<Vec<([u32; N], f64)>>(point, height, iterations)
     }
 
     #[cfg(nightly)]
@@ -160,11 +161,12 @@ impl<const N: usize> FractalNoise<N> {
         &mut self,
         point: [u32; N],
         height: f64,
-    ) -> (bool, RangeInclusive<f64>, [u32; N], u32)
+        iterations: usize,
+    ) -> (bool, RangeInclusive<f64>, [u32; N], usize, u32)
     where
         [(); 1 << N]:,
     {
-        self.cached_bounds_for_inner::<[([u32; N], f64); 1 << N]>(point, height)
+        self.cached_bounds_for_inner::<[([u32; N], f64); 1 << N]>(point, height, iterations)
     }
 
     fn lookup_or_compute(&mut self, midpoint: u32, target: [u32; N], noise: f64) -> f64 {
@@ -195,17 +197,38 @@ impl<const N: usize> FractalNoise<N> {
         &mut self,
         point: [u32; N],
         height: f64,
-    ) -> (bool, RangeInclusive<f64>, [u32; N], u32) {
+        mut iterations: usize,
+    ) -> (bool, RangeInclusive<f64>, [u32; N], usize, u32) {
         let mut last_bound = f64::NEG_INFINITY..=f64::INFINITY;
 
-        let mut midpoint = 1u32.reverse_bits();
-        let mut iterations = 0;
-        let mut points = PA::init(iter::once(([0u32; N], self.values[&[0u32; N]])));
+        let mut midpoint = 1u32.reverse_bits() >> iterations;
+
+        let nextpoint = midpoint.overflowing_shl(1).0;
+        let mut points = if nextpoint == 0 {
+            PA::init(iter::once(([0u32; N], self.values[&[0u32; N]])))
+        } else {
+            let mut next = point;
+
+            next.iter_mut().for_each(|n| {
+                *n = n
+                    .checked_div(nextpoint)
+                    .map(|n| n.mul(&nextpoint))
+                    .unwrap_or(0)
+            });
+            PA::init((0..(1 << N)).map(|combo| {
+                let mut other = next;
+                other
+                    .iter_mut()
+                    .zip(0..N)
+                    .for_each(|(n, o)| *n = n.overflowing_add(nextpoint * (combo >> o & 1)).0);
+                (other, *self.values.get(&other).unwrap())
+            }))
+        };
 
         while 0 < midpoint {
             let noise = self.noise(iterations);
             if noise.abs_diff_eq(&0.0, EPSILON) {
-                return (true, last_bound, points[0].0, midpoint << 1);
+                return (true, last_bound, points[0].0, iterations, midpoint << 1);
             }
 
             let (minpoint, maxpoint) = points
@@ -220,7 +243,7 @@ impl<const N: usize> FractalNoise<N> {
             last_bound = (minpoint - bound)..=(maxpoint + bound);
 
             if !last_bound.contains(&height) {
-                return (false, last_bound, points[0].0, midpoint << 1);
+                return (false, last_bound, points[0].0, iterations, midpoint << 1);
             }
 
             // compute the next starting point
@@ -241,7 +264,7 @@ impl<const N: usize> FractalNoise<N> {
             midpoint >>= 1;
             iterations += 1;
         }
-        (true, last_bound, points[0].0, 1)
+        (true, last_bound, points[0].0, iterations, 1)
     }
 
     #[cfg(not(nightly))]
@@ -420,14 +443,14 @@ impl Ray {
         }
     }
 
-    fn intersection_candidates<'a, T: Iterator<Item = (usize, Option<[u32; 2]>)>>(
+    fn intersection_candidates<'a, T: Iterator<Item = (usize, [u32; 2])>>(
         &self,
         noise: &'a mut FractalNoise<2>,
         nextpoint: u32,
         options: T,
     ) -> impl Iterator<Item = (usize, RectangularPrism, f64)> + use<'_, 'a, T> {
         options
-            .filter_map(move |(i, c)| c.map(|c| (i, RectangularPrism::around(c, noise, nextpoint))))
+            .map(move |(i, c)| (i, RectangularPrism::around(c, noise, nextpoint)))
             .filter_map(move |(i, prism)| {
                 let mut unbounded = prism;
                 unbounded.lower.y = f64::MIN;
@@ -454,10 +477,12 @@ impl Ray {
 
         let mut direction = [None, None];
         let mut intersection = if entry < 0.0 { 0.0 } else { entry };
+        let mut last_iterations = 0;
         while intersection < max {
             let marched = self.origin + self.direction * intersection;
             let query = [marched.x as u32, marched.z as u32];
-            let (terminated, range, base, nextpoint) = noise.cached_bounds_for(query, marched.y);
+            let (terminated, range, base, iterations, nextpoint) =
+                noise.cached_bounds_for(query, marched.y, last_iterations);
             if terminated {
                 if let Some((intersection, _)) =
                     RectangularPrism::around(base, noise, nextpoint).intersect(self)
@@ -473,13 +498,14 @@ impl Ray {
             let base_intersection = prism
                 .intersect(&self)
                 .map(|(t, _)| t)
-                .filter(|t| *t > intersection && t.is_normal());
-            let Some(actual) = ({
+                .filter(|t| *t > intersection && t.is_normal())
+                .map(|t| (t, iterations)); // we know that we can directly step the bounds
+            let Some((actual, iterations)) = ({
                 let options = [
-                    base[0].checked_sub(nextpoint).map(|x| [x, base[1]]),
-                    base[0].checked_add(nextpoint).map(|x| [x, base[1]]),
-                    base[1].checked_sub(nextpoint).map(|z| [base[0], z]),
-                    base[1].checked_add(nextpoint).map(|z| [base[0], z]),
+                    [base[0].overflowing_add(nextpoint).0, base[1]],
+                    [base[0], base[1].overflowing_add(nextpoint).0],
+                    [base[0].overflowing_sub(nextpoint).0, base[1]],
+                    [base[0], base[1].overflowing_sub(nextpoint).0],
                 ];
 
                 match direction {
@@ -491,9 +517,9 @@ impl Ray {
                                 *direction = Some(*i)
                             }
                         })
-                        .map(|(_, _, t)| t)
+                        .map(|(_, _, t)| (t, iterations.saturating_sub(1)))
                         .chain(base_intersection)
-                        .min_by(|t1, t2| t1.total_cmp(t2)),
+                        .min_by(|(t1, _), (t2, _)| t1.total_cmp(t2)),
                     [Some(first), None] => self
                         .intersection_candidates(
                             noise,
@@ -515,9 +541,9 @@ impl Ray {
                                 }
                             }
                         })
-                        .map(|(_, _, t)| t)
+                        .map(|(_, _, t)| (t, iterations.saturating_sub(1)))
                         .chain(base_intersection)
-                        .min_by(|t1, t2| t1.total_cmp(t2)),
+                        .min_by(|(t1, _), (t2, _)| t1.total_cmp(t2)),
                     [Some(first), Some(second)] => self
                         .intersection_candidates(
                             noise,
@@ -526,8 +552,9 @@ impl Ray {
                         )
                         .map(|(_, _, t)| t)
                         .filter(|t| *t > intersection && t.is_normal())
+                        .map(|t| (t, iterations.saturating_sub(1)))
                         .chain(base_intersection)
-                        .min_by(|t1, t2| t1.total_cmp(t2)),
+                        .min_by(|(t1, _), (t2, _)| t1.total_cmp(t2)),
                     _ => unreachable!("This is not possible by construction."),
                 }
             }) else {
@@ -535,6 +562,7 @@ impl Ray {
             };
 
             intersection = actual;
+            last_iterations = iterations;
         }
         None
     }
