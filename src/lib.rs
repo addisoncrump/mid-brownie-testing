@@ -1,6 +1,6 @@
 #![cfg_attr(nightly, feature(generic_const_exprs))]
 
-use cgmath::{AbsDiffEq, InnerSpace, Point3, Vector3, Zero};
+use cgmath::{AbsDiffEq, InnerSpace, Point3, Vector3};
 use std::collections::HashMap as StdHashMap;
 use std::error::Error;
 use std::hash::{BuildHasherDefault, Hash, Hasher};
@@ -277,7 +277,7 @@ impl<const N: usize> FractalNoise<N> {
     where
         [(); 1 << N]:,
     {
-        find_point_inner::<[([u32; N], f64); 1 << N]>(n)
+        self.find_point_inner::<[([u32; N], f64); 1 << N]>(n)
     }
 
     fn find_point_inner<PA: ValidPointsArray<([u32; N], f64), N>>(&mut self, n: [u32; N]) -> f64 {
@@ -409,11 +409,10 @@ impl RectangularPrism {
         let tmin = t1.min(t2).max(t3.min(t4)).max(t5.min(t6));
         let tmax = t1.max(t2).min(t3.max(t4)).min(t5.max(t6));
 
-        if tmax >= 0.0 {
-            if tmin <= tmax {
+        if tmax >= 0.0
+            && tmin <= tmax {
                 return Some((tmin, tmax));
             }
-        }
         None
     }
 
@@ -455,7 +454,7 @@ impl Ray {
                 let mut unbounded = prism;
                 unbounded.lower.y = f64::MIN;
                 unbounded.upper.y = f64::MAX;
-                unbounded.intersect(&self).map(|(t, _)| (i, prism, t))
+                unbounded.intersect(self).map(|(t, _)| (i, prism, t))
             })
     }
 
@@ -471,7 +470,7 @@ impl Ray {
             ]
             .into_iter(),
         );
-        let Some((entry, _)) = global_bounds.intersect(&self) else {
+        let Some((entry, _)) = global_bounds.intersect(self) else {
             return None;
         };
 
@@ -496,7 +495,7 @@ impl Ray {
             prism.lower.y = *range.start() + EPSILON;
             prism.upper.y = *range.end() - EPSILON;
             let base_intersection = prism
-                .intersect(&self)
+                .intersect(self)
                 .map(|(t, _)| t)
                 .filter(|t| *t > intersection && t.is_normal())
                 .map(|t| (t, iterations)); // we know that we can directly step the bounds

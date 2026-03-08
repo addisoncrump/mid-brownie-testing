@@ -27,3 +27,6 @@ wee_alloc = "0.4.5"
 
 [profile.release]
 lto = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
